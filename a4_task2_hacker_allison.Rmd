@@ -18,6 +18,7 @@ library(broom)
 library(nlstools)
 ```
 
+### Exploratory data visualization
 ```{r}
 # read in data, make tidy, add time column based on year
 fish_catch <- read_csv("fish_catch.csv") %>% 
@@ -27,9 +28,7 @@ fish_catch <- read_csv("fish_catch.csv") %>%
   clean_names() %>% 
   mutate(across(where(is.character),as.numeric)) %>% 
   mutate(time = year-1950)
-```
 
-```{r}
 # Exploratory graph of wild catch over time
 ggplot(data = fish_catch, aes(x = year, y = wild_catch))+
   geom_point()+
@@ -37,43 +36,49 @@ ggplot(data = fish_catch, aes(x = year, y = wild_catch))+
   labs(x = "Year", y = "Wild Catch (million tons)")
 
 # What if we log transform it?
-ggplot(data = fish_catch, aes(x = year, y = log(wild_catch)))+
-  geom_point()+
-  theme_classic()+
-  labs(x = "Year", y = "ln(Wild Catch)")
+# ggplot(data = fish_catch, aes(x = year, y = log(wild_catch)))+
+#   geom_point()+
+#   theme_classic()+
+#   labs(x = "Year", y = "ln(Wild Catch)")
 ```
 
 
-### Find starting values for K, A, and k
+### Pick equation and estimate parameter values to model
 ```{r}
 fish_catch_exp <- fish_catch %>% 
   filter(time <= 35) %>% 
   mutate(ln_catch = log(wild_catch))
 
 lm_k <- lm(ln_catch ~ time, data = fish_catch_exp)
-lm_k
+#lm_k
 
 # k estimate = 0.036
 ```
 
-Add text about the trend, equation, starting parameters
+The trend in this data is best described by the logistic growth equation:
 
-$P(t)=\frac{K}{1+Ae^{-kt}}$, where
+$P(t)=\frac{K}{1+Ae^{-kt}}$
+
+where:
 
 - $K$ is the carrying capacity
 - $A$ is $\frac{K-P_0}{P_0}$
 - $k$ is the growth rate constant
 
-Estimates:
-- K = 90
-- A = 4.3
-- k = 0.036
+Initial parameter estimates for this data:
+
+- $K$ $\approx$ 90
+- $A$ $\approx$ 4.3
+- $k$ $\approx$ 0.036
+
+
+### Run nonlinear least squares
 
 ```{r}
 fish_catch_nls <- nls(wild_catch ~ K/(1 + A*exp(-k*time)),
               data = fish_catch,
               start = list(K = 90, A = 4.3, k = 0.036),
-              trace = TRUE)
+              trace = FALSE)
 
 # summary(fish_catch_nls)
 
@@ -93,8 +98,9 @@ model_out %>%
              decimals = 3) %>% 
   fmt_scientific(columns = vars(p.value),
                  decimals = 1) %>% 
-  tab_header(title = "Nonlinear Least Squares Parameter Estimates") %>% 
+  tab_header(title = md("**Nonlinear Least Squares Parameter Estimates**")) %>%
   tab_options(table.width = pct(90)) %>% 
+  cols_align(align = "center") %>% 
   cols_label(
     term = "Term",
     estimate = "Estimate",
@@ -104,6 +110,7 @@ model_out %>%
   )
 ```
 
+### How well does the model fit the data?
 
 ```{r}
 # predict for fish catch for all years in fish_catch: 
