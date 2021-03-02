@@ -1,0 +1,40 @@
+---
+title: 'Task 2: Parameter Estimation with Wild Fish Catch'
+author: "Allison Hacker"
+date: "3/2/2021"
+output:
+  html_document:
+    theme: paper
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(janitor)
+library(patchwork)
+library(broom)
+library(nlstools)
+```
+
+```{r}
+# read in data, make tidy, add time column based on year
+fish_catch <- read_csv("fish_catch.csv") %>% 
+  row_to_names(row_number = 2) %>% 
+  slice(-(1:2)) %>% 
+  clean_names() %>% 
+  mutate(across(where(is.character),as.numeric)) %>% 
+  mutate(time = year-1950)
+```
+
+```{r}
+# Exploratory graph of wild catch over time
+
+ggplot(data = fish_catch, aes(x = year, y = wild_catch))+
+  geom_point()+
+  theme_classic()+
+  labs(x = "Year", y = "Wild Catch (million tons)")
+```
+
+Add text about the trend, equation, starting parameters
