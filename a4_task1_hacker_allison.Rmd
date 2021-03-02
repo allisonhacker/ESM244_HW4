@@ -1,0 +1,33 @@
+---
+title: 'Task 1: Hierarchical clustering'
+author: "Allison Hacker"
+date: "3/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(janitor)
+library(NbClust)
+library(cluster)
+library(factoextra)
+library(dendextend)
+library(ggdendro)
+```
+
+```{r}
+# read in data, change -999 values to NA
+stream_chem <- read_csv("sbc_lter_registered_stream_chemistry.csv") %>% 
+  mutate(across(where(is.double), ~na_if(., -999.0)))
+
+# calculate mean values for each site
+
+site_means <- stream_chem %>% 
+  group_by(site_code) %>% 
+  summarize(across(nh4_uM:spec_cond_uSpercm, mean, na.rm = TRUE))
+
+
+```
+
