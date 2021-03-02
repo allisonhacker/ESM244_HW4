@@ -23,6 +23,7 @@ library(nlstools)
 fish_catch <- read_csv("fish_catch.csv") %>% 
   row_to_names(row_number = 2) %>% 
   slice(-(1:2)) %>% 
+  slice(-(64:67)) %>% 
   clean_names() %>% 
   mutate(across(where(is.character),as.numeric)) %>% 
   mutate(time = year-1950)
@@ -30,11 +31,93 @@ fish_catch <- read_csv("fish_catch.csv") %>%
 
 ```{r}
 # Exploratory graph of wild catch over time
-
 ggplot(data = fish_catch, aes(x = year, y = wild_catch))+
   geom_point()+
   theme_classic()+
   labs(x = "Year", y = "Wild Catch (million tons)")
+
+# What if we log transform it?
+ggplot(data = fish_catch, aes(x = year, y = log(wild_catch)))+
+  geom_point()+
+  theme_classic()+
+  labs(x = "Year", y = "ln(Wild Catch)")
+```
+
+
+### Find starting values for K, A, and k
+```{r}
+fish_catch_exp <- fish_catch %>% 
+  filter(time <= 35) %>% 
+  mutate(ln_catch = log(wild_catch))
+
+lm_k <- lm(ln_catch ~ time, data = fish_catch_exp)
+lm_k
+
+# k estimate = 0.036
 ```
 
 Add text about the trend, equation, starting parameters
+
+$P(t)=\frac{K}{1+Ae^{-kt}}$, where
+
+- $K$ is the carrying capacity
+- $A$ is $\frac{K-P_0}{P_0}$
+- $k$ is the growth rate constant
+
+Estimates:
+- K = 90
+- A = 4.3
+- k = 0.036
+
+```{r}
+fish_catch_nls <- nls(wild_catch ~ K/(1 + A*exp(-k*time)),
+              data = fish_catch,
+              start = list(K = 90, A = 4.3, k = 0.036),
+              trace = TRUE)
+
+# summary(fish_catch_nls)
+
+# get summary in tidy table format 
+model_out <- broom::tidy(fish_catch_nls)
+
+# make nice looking table
+model_out %>% 
+  gt() %>% 
+  fmt_number(columns = vars(estimate, statistic),
+             decimals = 2) %>% 
+  fmt_number(columns = vars(std.error),
+             rows = std.error > 0.01,
+             decimals = 2) %>% 
+  fmt_number(columns = vars(std.error),
+             rows = std.error < 0.01,
+             decimals = 3) %>% 
+  fmt_scientific(columns = vars(p.value),
+                 decimals = 1) %>% 
+  tab_header(title = "Nonlinear Least Squares Parameter Estimates") %>% 
+  tab_options(table.width = pct(90)) %>% 
+  cols_label(
+    term = "Term",
+    estimate = "Estimate",
+    std.error = "Standard Error",
+    statistic = "Statistic",
+    p.value = "P Value"
+  )
+```
+
+
+```{r}
+# predict for fish catch for all years in fish_catch: 
+predict_catch <- predict(fish_catch_nls)
+
+# bind predictions to fish_catch data frame
+fish_catch_complete <- data.frame(fish_catch, predict_catch)
+
+# Plot them all together:
+ggplot(data = fish_catch_complete, aes(x = year, y = wild_catch)) +
+  geom_point() +
+  geom_line(aes(x = year, y = predict_catch), color = "blue") +
+  theme_minimal()+
+  labs(x = "Year", y = "Wild fish catch (million tons)")+
+  scale_x_continuous(limits = c(1950, 2015), breaks = seq(1950, 2020, 10), expand = c(0.01,0))
+```
+
