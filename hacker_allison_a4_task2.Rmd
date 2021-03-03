@@ -45,6 +45,7 @@ ggplot(data = fish_catch, aes(x = year, y = wild_catch))+
 
 ### Pick equation and estimate parameter values to model
 ```{r}
+# Estimate growth rate (k)
 fish_catch_exp <- fish_catch %>% 
   filter(time <= 35) %>% 
   mutate(ln_catch = log(wild_catch))
@@ -75,6 +76,7 @@ Initial parameter estimates for this data:
 ### Run nonlinear least squares
 
 ```{r}
+# run nonlinear least squares with logistic growth equation and parameter estimates
 fish_catch_nls <- nls(wild_catch ~ K/(1 + A*exp(-k*time)),
               data = fish_catch,
               start = list(K = 90, A = 4.3, k = 0.036),

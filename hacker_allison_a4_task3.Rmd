@@ -1,0 +1,61 @@
+---
+title: 'Task 3: Bootstrapping'
+author: "Allison Hacker"
+date: "3/2/2021"
+output: 
+  html_document:
+    theme: paper
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(janitor)
+library(boot)
+```
+
+### Bootstrapped proportions
+```{r}
+# create vector of student survey data (n= 36, yes(1) = 22, no(0) = 14)
+data = c(rep(1, 22), rep(0, 14))
+
+# view(data)
+
+# make function calculate proportion who did experience hostility/exclusion
+# since yes = 1 and no = 0, mean = proportion who responded yes
+
+prop_fun <- function(x, i){
+  mean(x[i])
+}
+
+# create 10,000 bootstrap samples
+boot_10k <- boot(data, statistic = prop_fun, R = 10000)
+
+# look at the outputs
+# boot_10k
+# boot_10k$t0 
+
+# make vector of bootstrap sample means into a data frame for graphing
+boot_10k_df <- data.frame(bs_mean = boot_10k$t)
+
+# make histogram of 10,000 bootstrap means aka proportions:
+ggplot(data = boot_10k_df, aes(x = bs_mean)) +
+  geom_histogram()+
+  theme_minimal()+
+  labs(x = "Proportion of nonbinary students who experienced\nexclusionary, hostile or intimidating behavior", y = "Count")
+
+```
+
+
+### Confidence interval
+```{r, collapse=TRUE}
+# calculate 95% confidence interval for bootstrapped sample means
+boot.ci(boot_10k, conf = 0.95)
+```
+
+
+The proportion of nonbinary/genderqueer students who reported experiencing exclusionary, hostile, or intimidating behavior at UCSB was 61% with a 95% confidence interval of 45.3% to 77.2%. This means that 95 out of 100 times, we expect the actual proportion of all nonbinary/genderqueer students at UCSB who experienced exclusionary, hostile, or intimidating behavior to fall within this range.
+
+**Data source:** 2014 UCSB Campus Climate Project Final Report (prepared by Rankin & Associates Consulting)
